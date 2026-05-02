@@ -226,7 +226,7 @@ async function sendNotificationEmail({ fullName, email, service, message }) {
         </div>
         <!-- Footer -->
         <div style="background:#f8f9fc;padding:20px 40px;text-align:center;border-top:1px solid #e2e8f0;">
-          <p style="color:#94a3b8;font-size:0.78rem;margin:0;">© 2025 TheBookkeepers · hello@thebookkeepers.com</p>
+          <p style="color:#94a3b8;font-size:0.78rem;margin:0;">© 2025 TheBookkeepers · smazzz110@gmail.com</p>
         </div>
       </div>
     `,
