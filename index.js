@@ -108,7 +108,7 @@ async function sendNotificationEmail({ fullName, email, service, message }) {
 }
 
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dir, 'index.html'));
 });
 
 app.listen(PORT, () => {
