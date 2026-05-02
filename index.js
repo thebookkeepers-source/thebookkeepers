@@ -73,7 +73,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve the /public folder as static files
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, 'public')));
 
 /* ── Rate limiter — max 10 submissions per IP per 15 min ── */
 const formLimiter = rateLimit({
