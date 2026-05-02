@@ -8,17 +8,16 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
-// Fix private key newlines
 const privateKey = process.env.FIREBASE_PRIVATE_KEY
   ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/"/g, '')
   : undefined;
 
 admin.initializeApp({
   credential: admin.credential.cert({
-    projectId:   process.env.FIREBASE_PROJECT_ID,
+    projectId:    process.env.FIREBASE_PROJECT_ID,
     privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
-    privateKey:  privateKey,
-    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey:   privateKey,
+    clientEmail:  process.env.FIREBASE_CLIENT_EMAIL,
   }),
 });
 
@@ -78,19 +77,22 @@ app.post('/submit-form', formLimiter, async (req, res) => {
     await sendNotificationEmail(lead);
     return res.status(200).json({ success: true, message: 'Message received!' });
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Error processing form submission:', err);
     return res.status(500).json({ success: false, message: 'An internal error occurred. Please try again later.' });
   }
 });
 
 function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 async function sendNotificationEmail({ fullName, email, service, message }) {
   const managerEmail = process.env.MANAGER_EMAIL;
   if (!managerEmail) return;
-
   await transporter.sendMail({
     from:    `"TheBookkeepers" <${process.env.SMTP_USER}>`,
     to:      managerEmail,
@@ -110,7 +112,7 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`TheBookkeepers server running on http://localhost:${PORT}`);
   console.log(`Firebase project: ${process.env.FIREBASE_PROJECT_ID}`);
   console.log(`Notifications to: ${process.env.MANAGER_EMAIL}`);
 });
