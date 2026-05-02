@@ -73,7 +73,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve the /public folder as static files
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname));
 
 /* ── Rate limiter — max 10 submissions per IP per 15 min ── */
 const formLimiter = rateLimit({
@@ -246,7 +246,7 @@ function escapeHtml(str) {
 
 /* ── Catch-all: serve index.html for any unknown route ── */
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 /* ══════════════════════════════════════════
