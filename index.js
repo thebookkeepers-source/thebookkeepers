@@ -135,7 +135,7 @@ app.post('/submit-form', formLimiter, async (req, res) => {
 
   try {
     /* 2. Save to Firestore */
-    const docRef = await db.collection('leads').add(lead);
+    const docRef = await db.collection('leads').add(lead);dir
     console.log(`✅  Lead saved to Firestore — ID: ${docRef.id}`);
 
     /* 3. Send email notification */
@@ -246,7 +246,7 @@ function escapeHtml(str) {
 
 /* ── Catch-all: serve index.html for any unknown route ── */
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 /* ══════════════════════════════════════════
