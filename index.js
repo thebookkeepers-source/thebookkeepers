@@ -8,19 +8,11 @@ const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 const rateLimit = require('express-rate-limit');
 
-const privateKey = process.env.FIREBASE_PRIVATE_KEY
-  ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n').replace(/"/g, '')
-  : undefined;
+const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
 
 admin.initializeApp({
-  credential: admin.credential.cert({
-    projectId:    process.env.FIREBASE_PROJECT_ID,
-    privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
-    privateKey:   privateKey,
-    clientEmail:  process.env.FIREBASE_CLIENT_EMAIL,
-  }),
+  credential: admin.credential.cert(serviceAccount),
 });
-
 const db = admin.firestore();
 
 const transporter = nodemailer.createTransport({
