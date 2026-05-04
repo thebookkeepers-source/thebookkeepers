@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TheBookkeepers — Leads Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #0b1a35; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .card { background: #fff; border-radius: 16px; padding: 40px; width: 100%; max-width: 900px; margin: 30px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; flex-wrap: wrap; gap: 16px; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 42px; height: 42px; background: #f97316; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 0.8rem; }
+  .logo-text { font-weight: 700; font-size: 1.1rem; color: #0b1a35; }
+  .logo-text span { color: #f97316; }
+  h2 { color: #0b1a35; font-size: 1.1rem; }
+  .btn { padding: 10px 24px; border-radius: 50px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; }
+  .btn-primary { background: #f97316; color: #fff; }
+  .btn-primary:hover { background: #ea6c0a; transform: translateY(-2px); }
+  .btn-secondary { background: #0b1a35; color: #fff; }
+  .btn-secondary:hover { background: #1a3461; transform: translateY(-2px); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat { background: #f8f9fc; border-radius: 10px; padding: 16px; text-align: center; }
+  .stat strong { display: block; font-size: 1.8rem; font-weight: 800; color: #f97316; }
+  .stat span { font-size: 0.8rem; color: #64748b; }
+  .actions { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .loading { text-align: center; padding: 40px; color: #64748b; }
+  .spinner { width: 40px; height: 40px; border: 4px solid #f0f0f0; border-top-color: #f97316; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th { background: #0b1a35; color: #fff; padding: 12px 16px; text-align: left; font-weight: 600; }
+  th:first-child { border-radius: 8px 0 0 8px; }
+  th:last-child { border-radius: 0 8px 8px 0; }
+  td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; color: #1e293b; }
+  tr:hover td { background: #fff7ed; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .badge-book { background: #dbeafe; color: #1d4ed8; }
+  .badge-analytics { background: #d1fae5; color: #065f46; }
+  .empty { text-align: center; padding: 40px; color: #94a3b8; }
+  .error-box { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 8px; padding: 16px; color: #991b1b; margin-bottom: 20px; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">TB</div>
+      <div>
+        <div class="logo-text">The<span>Bookkeepers</span></div>
+        <div style="font-size:0.75rem;color:#64748b;">Leads Dashboard</div>
+      </div>
+    </div>
+    <h2 id="dateTime"></h2>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><strong id="totalLeads">—</strong><span>Total Leads</span></div>
+    <div class="stat"><strong id="bookkeepingCount">—</strong><span>Bookkeeping</span></div>
+    <div class="stat"><strong id="analyticsCount">—</strong><span>Analytics & Reporting</span></div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="downloadBtn" onclick="downloadCSV()" disabled>⬇ Download Excel/CSV</button>
+    <button class="btn btn-secondary" onclick="loadLeads()">🔄 Refresh</button>
+  </div>
+
+  <div id="errorBox" class="error-box" style="display:none;"></div>
+  <div id="content" class="loading">
+    <div class="spinner"></div>
+    <p>Loading leads...</p>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, getDocs, orderBy, query } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  // Firebase config — update these values
+  const firebaseConfig = {
+    apiKey: "AIzaSyBMOw-cixAN1cuJRT85YnZOg2lGQiMTbwA",
+    authDomain: "the-book-keeper-a8ddd.firebaseapp.com",
+    projectId: "the-book-keeper-a8ddd",
+    storageBucket: "the-book-keeper-a8ddd.firebasestorage.app",
+    messagingSenderId: "910255579458",
+    appId: "1:910255579458:web:1f836996035ee212bc28db",
+    measurementId: "G-6MPC8WBBZQ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.allLeads = [];
+
+  window.loadLeads = async function() {
+    document.getElementById('content').innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading leads...</p></div>';
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('downloadBtn').disabled = true;
+
+    try {
+      const q = query(collection(db, 'leads'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+
+      window.allLeads = [];
+      snapshot.forEach(doc => {
+        window.allLeads.push({ id: doc.id, ...doc.data() });
+      });
+
+      updateStats(window.allLeads);
+      renderTable(window.allLeads);
+      document.getElementById('downloadBtn').disabled = false;
+
+    } catch (err) {
+      document.getElementById('errorBox').textContent = 'Error: ' + err.message;
+      document.getElementById('errorBox').style.display = 'block';
+      document.getElementById('content').innerHTML = '<div class="empty">❌ Could not load leads.</div>';
+    }
+  };
+
+  function updateStats(leads) {
+    document.getElementById('totalLeads').textContent = leads.length;
+    document.getElementById('bookkeepingCount').textContent = leads.filter(l => l.service === 'Bookkeeping').length;
+    document.getElementById('analyticsCount').textContent = leads.filter(l => l.service === 'Analytics & Reporting').length;
+  }
+
+  function renderTable(leads) {
+    if (leads.length === 0) {
+      document.getElementById('content').innerHTML = '<div class="empty">📭 No leads yet.</div>';
+      return;
+    }
+
+    let html = `<div style="overflow-x:auto;"><table>
+      <thead><tr>
+        <th>#</th>
+        <th>Full Name</th>
+        <th>Email</th>
+        <th>Service</th>
+        <th>Message</th>
+        <th>Date</th>
+      </tr></thead><tbody>`;
+
+    leads.forEach((lead, i) => {
+      const date = lead.createdAt ? new Date(lead.createdAt.seconds * 1000).toLocaleDateString('en-PK', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+      const badge = lead.service === 'Bookkeeping'
+        ? `<span class="badge badge-book">Bookkeeping</span>`
+        : `<span class="badge badge-analytics">Analytics</span>`;
+      const msg = lead.message ? lead.message.substring(0, 50) + (lead.message.length > 50 ? '...' : '') : '—';
+
+      html += `<tr>
+        <td>${i + 1}</td>
+        <td><strong>${lead.fullName || '—'}</strong></td>
+        <td>${lead.email || '—'}</td>
+        <td>${badge}</td>
+        <td>${msg}</td>
+        <td>${date}</td>
+      </tr>`;
+    });
+
+    html += '</tbody></table></div>';
+    document.getElementById('content').innerHTML = html;
+  }
+
+  window.downloadCSV = function() {
+    if (!window.allLeads.length) return;
+
+    const headers = ['#', 'Full Name', 'Email', 'Service', 'Message', 'Date'];
+    const rows = window.allLeads.map((lead, i) => {
+      const date = lead.createdAt ? new Date(lead.createdAt.seconds * 1000).toLocaleDateString() : '';
+      return [
+        i + 1,
+        `"${(lead.fullName || '').replace(/"/g, '""')}"`,
+        `"${(lead.email || '').replace(/"/g, '""')}"`,
+        `"${(lead.service || '').replace(/"/g, '""')}"`,
+        `"${(lead.message || '').replace(/"/g, '""')}"`,
+        `"${date}"`
+      ].join(',');
+    });
+
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `thebookkeepers-leads-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Date time display
+  function updateTime() {
+    const now = new Date();
+    document.getElementById('dateTime').textContent = now.toLocaleDateString('en-PK', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  }
+  updateTime();
+
+  // Load on start
+  loadLeads();
+</script>
+</body>
+</html>
