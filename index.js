@@ -13,19 +13,23 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSO
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
 });
+
 const db = admin.firestore();
 
 const transporter = nodemailer.createTransport({
-  host:   process.env.SMTP_HOST || 'smtp.gmail.com',
-  port:   parseInt(process.env.SMTP_PORT || '587', 10),
+  host: process.env.SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_SECURE === 'true',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  connectionTimeout: 5000,
+  greetingTimeout: 5000,
+  socketTimeout: 5000,
 });
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.set('trust proxy', 1);
@@ -50,30 +54,6 @@ function validatePayload({ fullName, email, service, message }) {
   return errors;
 }
 
-app.post('/submit-form', formLimiter, async (req, res) => {
-  const { fullName, email, service, message } = req.body;
-  const errors = validatePayload({ fullName, email, service, message });
-  if (errors.length) return res.status(400).json({ success: false, message: errors[0] });
-
-  const lead = {
-    fullName: fullName.trim(),
-    email:    email.trim().toLowerCase(),
-    service,
-    message:  message.trim(),
-    createdAt: admin.firestore.FieldValue.serverTimestamp(),
-  };
-
-  try {
-    const docRef = await db.collection('leads').add(lead);
-    console.log('Lead saved:', docRef.id);
-    await sendNotificationEmail(lead);
-    return res.status(200).json({ success: true, message: 'Message received!' });
-  } catch (err) {
-    console.error('Error processing form submission:', err);
-    return res.status(500).json({ success: false, message: 'An internal error occurred. Please try again later.' });
-  }
-});
-
 function escapeHtml(str) {
   return String(str)
     .replace(/&/g, '&amp;')
@@ -85,26 +65,54 @@ function escapeHtml(str) {
 async function sendNotificationEmail({ fullName, email, service, message }) {
   const managerEmail = process.env.MANAGER_EMAIL;
   if (!managerEmail) return;
-  await transporter.sendMail({
-    from:    `"TheBookkeepers" <${process.env.SMTP_USER}>`,
-    to:      managerEmail,
-    replyTo: email,
-    subject: `New Lead: ${service} — ${fullName}`,
-    html: `<h2>New Lead</h2>
-      <p><b>Name:</b> ${escapeHtml(fullName)}</p>
-      <p><b>Email:</b> ${escapeHtml(email)}</p>
-      <p><b>Service:</b> ${escapeHtml(service)}</p>
-      <p><b>Message:</b> ${escapeHtml(message)}</p>`,
-  });
-  console.log('Email sent to', managerEmail);
+  try {
+    await transporter.sendMail({
+      from: `"TheBookkeepers" <${process.env.SMTP_USER}>`,
+      to: managerEmail,
+      replyTo: email,
+      subject: `New Lead: ${service} — ${fullName}`,
+      html: `<h2>New Lead</h2>
+        <p><b>Name:</b> ${escapeHtml(fullName)}</p>
+        <p><b>Email:</b> ${escapeHtml(email)}</p>
+        <p><b>Service:</b> ${escapeHtml(service)}</p>
+        <p><b>Message:</b> ${escapeHtml(message)}</p>`,
+    });
+    console.log('Email sent to', managerEmail);
+  } catch (emailErr) {
+    console.error('Email error:', emailErr.message);
+  }
 }
+
+app.post('/submit-form', formLimiter, async (req, res) => {
+  const { fullName, email, service, message } = req.body;
+  const errors = validatePayload({ fullName, email, service, message });
+  if (errors.length) return res.status(400).json({ success: false, message: errors[0] });
+
+  const lead = {
+    fullName: fullName.trim(),
+    email: email.trim().toLowerCase(),
+    service,
+    message: message.trim(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    const docRef = await db.collection('leads').add(lead);
+    console.log('Lead saved:', docRef.id);
+    await sendNotificationEmail(lead);
+    return res.status(200).json({ success: true, message: 'Message received!' });
+  } catch (err) {
+    console.error('Error:', err);
+    return res.status(500).json({ success: false, message: 'An internal error occurred. Please try again later.' });
+  }
+});
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.listen(PORT, () => {
-  console.log(`TheBookkeepers server running on http://localhost:${PORT}`);
+  console.log(`TheBookkeepers server running on port ${PORT}`);
   console.log(`Firebase project: ${process.env.FIREBASE_PROJECT_ID}`);
   console.log(`Notifications to: ${process.env.MANAGER_EMAIL}`);
 });
