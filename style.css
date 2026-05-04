@@ -64,8 +64,8 @@ img{max-width:100%;display:block}
 .nav-container{display:flex;align-items:center;gap:32px;padding-top:14px;padding-bottom:14px}
 .logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
 .logo-icon{width:42px;height:42px;background:var(--accent);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.8rem;letter-spacing:-0.5px;flex-shrink:0}
-.logo-text{font-weight:700;font-size:1.15rem;color:var(--navy)}
-.logo-accent{color:var(--accent)}
+.logo-text{font-weight:700;font-size:1.15rem;color:#1a6fbd}
+.logo-accent{color:#00d4c8}
 .nav-links{display:flex;align-items:center;gap:6px;margin-left:auto}
 .nav-links a{color:var(--text-main);font-size:0.9rem;font-weight:500;padding:8px 14px;border-radius:8px;transition:var(--transition)}
 .nav-links a:hover{color:var(--accent);background:var(--accent-light)}
